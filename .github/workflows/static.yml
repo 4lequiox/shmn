@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Test BIM - Universidad El Bosque</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    .hidden { display: none; }
+    .question-screen { display: none; }
+    .active { display: block; }
+    .timer { font-size: 1.5em; font-weight: bold; color: red; text-align: center; margin-bottom: 20px; }
+    .center { text-align: center; }
+    .btn-group { margin-top: 20px; text-align: center; }
+    button { padding: 10px 20px; margin: 5px; }
+  </style>
+</head>
+<body>
+  <h2 class="center">Test sobre BIM - Universidad El Bosque</h2>
+
+  <div id="login">
+    <p>Ingresa tu nombre completo:</p>
+    <input type="text" id="name" placeholder="Nombre completo" required><br><br>
+    <p>Ingresa tu correo institucional:</p>
+    <input type="email" id="email" placeholder="tucorreo@unbosque.edu.co" required />
+    <button onclick="validateEmail()">Ingresar</button>
+    <p id="emailError" style="color:red;"></p>
+  </div>
+
+  <div id="quizContainer" class="hidden">
+    <div class="timer" id="timer">90</div>
+    <form id="quizForm"></form>
+    <div class="btn-group">
+      <button type="button" id="prevBtn" onclick="prevQuestion()">Atrás</button>
+      <button type="button" id="nextBtn" onclick="nextQuestion()">Siguiente</button>
+    </div>
+  </div>
+
+  <div id="result" class="hidden center">
+    <h3>Tu puntaje final es: <span id="score"></span> / 50</h3>
+  </div>
+
+  <script>
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbzQducoYX2DT0KQKqR98sZtoIQe7hynzwzTbHMddkJuMDfJRk_9ubGnHbTRExBqMGX_5g/exec';
+    const initialScore = 35;
+    let currentQuestion = 0;
+    let shuffledQuestions = [];
+    let timeLeft = 90;
+    let timerInterval;
+
+    const questions = [
+      { question: "¿Qué significa BIM?", options: ["Building Information Modeling", "Building Integrated Management", "Basic Information Model", "Built-in Model"], answer: "Building Information Modeling" },
+      { question: "¿Cuál es una ventaja clave del uso de BIM?", options: ["Mayor consumo de papel", "Menor colaboración", "Visualización 3D del proyecto", "Aumento de errores"], answer: "Visualización 3D del proyecto" },
+      { question: "¿Qué dimensión del BIM se asocia con el tiempo?", options: ["3D", "4D", "5D", "6D"], answer: "4D" },
+      { question: "¿Qué norma internacional regula la gestión de información en BIM?", options: ["ISO 19650", "ISO 9001", "NIF 2020", "BIM 360"], answer: "ISO 19650" },
+      { question: "¿Cuál es el rol de un 'BIM Manager'?", options: ["Dibujar planos", "Diseñar estructuras", "Coordinar la estrategia BIM", "Hacer renders"], answer: "Coordinar la estrategia BIM" },
+      { question: "¿Qué herramienta es común para modelado BIM?", options: ["AutoCAD", "Excel", "Revit", "Word"], answer: "Revit" },
+      { question: "¿Cuál es la diferencia entre CAD y BIM?", options: ["BIM incluye información, CAD no", "CAD es tridimensional", "BIM no sirve para construcción", "CAD es más moderno"], answer: "BIM incluye información, CAD no" },
+      { question: "¿Qué significa LOD en BIM?", options: ["Level of Development", "Level of Data", "List of Documents", "Layer of Design"], answer: "Level of Development" },
+      { question: "¿Qué dimensión del BIM se relaciona con costos?", options: ["4D", "5D", "6D", "7D"], answer: "5D" },
+      { question: "¿Qué representa la dimensión 6D en BIM?", options: ["Programación", "Mantenimiento", "Sostenibilidad", "Diseño estructural"], answer: "Sostenibilidad" },
+      { question: "¿Qué software se utiliza para detección de interferencias?", options: ["Navisworks", "SketchUp", "Photoshop", "Notepad"], answer: "Navisworks" },
+      { question: "¿Qué es un 'Common Data Environment' (CDE)?", options: ["Servidor de correos", "Entorno común de datos", "Archivo CAD", "Software de contabilidad"], answer: "Entorno común de datos" },
+      { question: "¿Cuál es un uso típico del modelo BIM en construcción?", options: ["Visualización únicamente", "Coordinación de disciplinas", "Redacción legal", "Control de inventario"], answer: "Coordinación de disciplinas" },
+      { question: "¿Qué significa IFC en BIM?", options: ["Industry Foundation Classes", "Information for Construction", "Internal File Code", "Infrastructure for Coordination"], answer: "Industry Foundation Classes" },
+      { question: "¿Qué dimensión se asocia con la gestión del ciclo de vida?", options: ["4D", "6D", "7D", "3D"], answer: "7D" },
+
+      // 15 NUEVAS PREGUNTAS
+      { question: "¿Qué fase del proyecto BIM se enfoca en el mantenimiento?", options: ["Diseño", "Operación", "Construcción", "Demolición"], answer: "Operación" },
+      { question: "¿Qué significa BEP en BIM?", options: ["Building Execution Plan", "BIM Execution Plan", "Basic Evaluation Protocol", "BIM Evaluation Program"], answer: "BIM Execution Plan" },
+      { question: "¿Qué modelo de archivo es estándar abierto para BIM?", options: ["DWG", "IFC", "RVT", "PDF"], answer: "IFC" },
+      { question: "¿Qué herramienta permite revisar modelos BIM colaborativamente en la nube?", options: ["Revit", "AutoCAD", "BIM 360", "SketchUp"], answer: "BIM 360" },
+      { question: "¿Cuál es la principal ventaja de usar modelos 4D?", options: ["Análisis estructural", "Simulación del tiempo", "Costos de materiales", "Coordinación eléctrica"], answer: "Simulación del tiempo" },
+      { question: "¿Qué disciplina se beneficia más del análisis 5D?", options: ["Topografía", "Costos", "Diseño de interiores", "Paisajismo"], answer: "Costos" },
+      { question: "¿Qué organización promueve estándares BIM a nivel mundial?", options: ["Autodesk", "ISO", "buildingSMART", "Google"], answer: "buildingSMART" },
+      { question: "¿Qué es un clash en BIM?", options: ["Una vista 3D", "Un error de diseño", "Una interferencia entre elementos", "Un modelo compartido"], answer: "Una interferencia entre elementos" },
+      { question: "¿Qué significa COBie en BIM?", options: ["Construction of Buildings in Europe", "Coordination of BIM Elements", "Construction-Operations Building information exchange", "Code of BIM Integration and Execution"], answer: "Construction-Operations Building information exchange" },
+      { question: "¿Qué software es más usado para planificación 4D?", options: ["Navisworks", "Excel", "Photoshop", "Bluebeam"], answer: "Navisworks" },
+      { question: "¿Cuál es una salida común del modelo BIM?", options: ["Maquetas físicas", "Planos impresos", "Planos digitales en PDF/DWG", "Videos de la obra"], answer: "Planos digitales en PDF/DWG" },
+      { question: "¿Qué normativa ISO aplica directamente a BIM?", options: ["ISO 27001", "ISO 9001", "ISO 19650", "ISO 14001"], answer: "ISO 19650" },
+      { question: "¿Cuál es el objetivo principal de un modelo federado?", options: ["Reducir archivos", "Unir todos los modelos de disciplinas", "Diseñar más rápido", "Crear animaciones"], answer: "Unir todos los modelos de disciplinas" },
+      { question: "¿Cuál es el formato nativo de Revit?", options: ["RFA", "DWG", "IFC", "RVT"], answer: "RVT" },
+      { question: "¿Qué fase del ciclo de vida se representa con 6D BIM?", options: ["Costos", "Diseño", "Operación y mantenimiento", "Planificación"], answer: "Operación y mantenimiento" }
+    ];
+
+    function validateEmail() {
+      const email = document.getElementById("email").value;
+      const name = document.getElementById("name").value;
+      const error = document.getElementById("emailError");
+
+      if (!name.trim()) {
+        error.textContent = "Por favor ingresa tu nombre completo.";
+        return;
+      }
+
+      if (email.endsWith("@unbosque.edu.co")) {
+        document.getElementById("login").classList.add("hidden");
+        document.getElementById("quizContainer").classList.remove("hidden");
+        startTimer();
+        loadQuiz();
+      } else {
+        error.textContent = "Debes ingresar un correo institucional válido (@unbosque.edu.co)";
+      }
+    }
+
+    function shuffle(array) {
+      return array.sort(() => Math.random() - 0.5);
+    }
+
+    function loadQuiz() {
+      shuffledQuestions = shuffle([...questions]).slice(0, 15); // ← solo 15 aleatorias
+      const form = document.getElementById("quizForm");
+      form.innerHTML = "";
+
+      shuffledQuestions.forEach((q, index) => {
+        const shuffledOptions = shuffle([...q.options]);
+        const div = document.createElement("div");
+        div.classList.add("question-screen");
+        if (index === 0) div.classList.add("active");
+        div.innerHTML = `
+          <p><strong>${index + 1}. ${q.question}</strong></p>
+          ${shuffledOptions.map(opt => `
+            <label>
+              <input type="radio" name="q${index}" value="${opt}" required> ${opt}
+            </label><br>
+          `).join("")}
+        `;
+        form.appendChild(div);
+      });
+
+      updateButtons();
+    }
+
+    function updateButtons() {
+      const total = shuffledQuestions.length;
+      const screens = document.querySelectorAll(".question-screen");
+
+      screens.forEach((screen, i) => {
+        screen.classList.remove("active");
+        if (i === currentQuestion) screen.classList.add("active");
+      });
+
+      const btnNext = document.getElementById("nextBtn");
+      const btnPrev = document.getElementById("prevBtn");
+
+      btnPrev.style.display = currentQuestion === 0 ? "none" : "inline-block";
+
+      if (currentQuestion === total - 1) {
+        btnNext.textContent = "Enviar respuestas";
+        btnNext.onclick = submitQuiz;
+      } else {
+        btnNext.textContent = "Siguiente";
+        btnNext.onclick = nextQuestion;
+      }
+    }
+
+    function nextQuestion() {
+      const radios = document.querySelectorAll(`input[name="q${currentQuestion}"]`);
+      const checked = Array.from(radios).some(r => r.checked);
+
+      if (!checked) {
+        alert("Por favor selecciona una opción antes de continuar.");
+        return;
+      }
+
+      if (currentQuestion < shuffledQuestions.length - 1) {
+        currentQuestion++;
+        updateButtons();
+      }
+    }
+
+    function prevQuestion() {
+      if (currentQuestion > 0) {
+        currentQuestion--;
+        updateButtons();
+      }
+    }
+
+    function startTimer() {
+      const timerDisplay = document.getElementById("timer");
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        timerDisplay.textContent = timeLeft;
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          submitQuiz();
+        }
+      }, 1000);
+    }
+
+    function submitQuiz() {
+      clearInterval(timerInterval);
+      const formData = new FormData(document.getElementById("quizForm"));
+      let score = initialScore;
+
+      shuffledQuestions.forEach((q, i) => {
+        const answer = formData.get(`q${i}`);
+        if (answer === q.answer) score++;
+      });
+
+      document.getElementById("quizContainer").classList.add("hidden");
+      document.getElementById("result").classList.remove("hidden");
+      document.getElementById("score").textContent = score;
+
+      const formPayload = new URLSearchParams();
+      formPayload.append('Nombre', document.getElementById("name").value);
+      formPayload.append('Correo', document.getElementById("email").value);
+      formPayload.append('Puntaje', score);
+
+      fetch(scriptURL, {
+        method: 'POST',
+        body: formPayload
+      });
+    }
+  </script>
+</body>
+</html>
